@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    background:#020617;
+    color:white;
+    font-family:sans-serif;
+    text-align:center;
+}
+h1{color:#00f5ff;}
+
+.tagline{
+    color:#94a3b8;
+    margin-bottom:20px;
+}
+
+/* INPUT */
+.input-box{margin:20px;}
+input{padding:8px;margin:5px;border-radius:5px;border:none;}
+button{padding:8px;background:#00f5ff;border:none;border-radius:5px;}
+#msg{color:red;}
+
+/* PANELS */
+.panel{width:30%;display:inline-block;vertical-align:top;}
+
+.card{
+    background:#0f172a;
+    margin:10px;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 0 10px #00f5ff55;
+}
+
+/* ATTACK */
+.attack-container{display:flex;margin:40px;gap:20px;}
+.attack-left{width:60%;}
+.attack-right{
+    width:40%;
+    box-shadow:0 0 10px red;
+    padding:10px;
+    height:350px;
+    overflow:auto;
+}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #1e293b;padding:8px;font-size:14px;}
+th{color:#00f5ff;}
+</style>
+</head>
+
+<body>
+
+<h1>⚡ EV Charging Command Center</h1>
+
+<div class="tagline">
+Real-Time Smart Charging • Cyber Attack Detection • Secure Energy Monitoring System
+</div>
+
+<!-- INPUT -->
+<div class="input-box">
+<input id="carNumber" placeholder="DL01AB1234">
+<input id="driverName" placeholder="Driver Name">
+<input id="battery" placeholder="Battery %">
+<button onclick="addVehicle()">Add Vehicle</button>
+<p id="msg"></p>
+</div>
+
+<!-- PANELS -->
+<div class="panel">
+<h2>🚗 Entered</h2>
+<div id="entered"></div>
+</div>
+
+<div class="panel">
+<h2>⚡ Charging</h2>
+<div id="charging"></div>
+</div>
+
+<div class="panel">
+<h2>💰 Completed</h2>
+<div id="completed"></div>
+</div>
+
+<!-- ATTACK -->
+<div class="attack-container">
+<div class="attack-left">
+<canvas id="attackChart"></canvas>
+</div>
+
+<div class="attack-right">
+<h3>🚨 Attack Logs</h3>
+<table>
+<thead><tr><th>Type</th><th>Details</th><th>Time</th></tr></thead>
+<tbody id="attackTable"></tbody>
+</table>
+</div>
+</div>
+
+<!-- CYBER LOG -->
+<h2>📜 Cyber Logs</h2>
+<table>
+<thead><tr><th>Time</th><th>Event</th><th>Details</th></tr></thead>
+<tbody id="logTable"></tbody>
+</table>
+
+<script>
+
+let chart;
+
+/* ---------------- GRAPH ---------------- */
+
+function initChart(){
+    chart = new Chart(document.getElementById("attackChart"),{
+        type:"bar",
+        data:{
+            labels:["Replay","Fake","Missing","DoS"],
+            datasets:[{
+                data:[0,0,0,0],
+                backgroundColor:[
+                    "#38bdf8",
+                    "#f87171",
+                    "#facc15",
+                    "#34d399"
+                ]
+            }]
+        },
+        options:{
+            plugins:{
+                tooltip:{
+                    callbacks:{
+                        label:function(ctx){
+                            let label=ctx.label;
+
+                            if(label==="Replay") return "Replay Attack → Packet reuse | Risk: Fraud | Blocked";
+                            if(label==="Fake") return "Fake Data → Billing Manipulation | Risk: Loss | Blocked";
+                            if(label==="Missing") return "Missing Data → Incomplete session | Risk: Error | Blocked";
+                            if(label==="DoS") return "DoS Attack → Server overload | Risk: Crash | Blocked";
+                        }
+                    }
+                }
+            },
+            scales:{
+                x:{ticks:{color:"white",font:{size:14}}},
+                y:{ticks:{color:"white",font:{size:14}}}
+            }
+        }
+    });
+}
+
+function updateChart(data){
+    let c={Replay:0,Fake:0,Missing:0,DoS:0};
+
+    data.attack_logs.forEach(a=>{
+        if(a.event.includes("REPLAY"))c.Replay++;
+        if(a.event.includes("FAKE"))c.Fake++;
+        if(a.event.includes("MISSING"))c.Missing++;
+        if(a.event.includes("DOS"))c.DoS++;
+    });
+
+    chart.data.datasets[0].data=[c.Replay,c.Fake,c.Missing,c.DoS];
+    chart.update();
+}
+
+/* ---------------- VALIDATION ---------------- */
+
+function isValidCar(num){
+    return /^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$/.test(num);
+}
+
+/* ---------------- ADD VEHICLE ---------------- */
+
+function addVehicle(){
+
+    let car=document.getElementById("carNumber").value.toUpperCase();
+    let driver=document.getElementById("driverName").value;
+    let battery=document.getElementById("battery").value;
+    let msg=document.getElementById("msg");
+
+    if(!isValidCar(car)){
+        msg.innerText="Car number is not valid";
+        return;
+    }
+
+    msg.innerText="";
+
+    fetch("/add_vehicle",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({vehicle_id:car,driver:driver,battery:battery})
+    });
+}
+
+/* ---------------- FETCH ---------------- */
+
+function fetchData(){
+fetch("/status")
+.then(res=>res.json())
+.then(data=>{
+
+/* ENTERED */
+let e=document.getElementById("entered"); e.innerHTML="";
+data.entered.forEach(v=>{
+e.innerHTML+=`
+<div class="card">
+🚗 ${v.vehicle_id}<br>
+👤 ${v.driver}<br>
+🔋 Battery: ${v.battery}%
+</div>`;
+});
+
+/* CHARGING */
+let c=document.getElementById("charging"); c.innerHTML="";
+data.charging.forEach(v=>{
+c.innerHTML+=`
+<div class="card">
+🚗 ${v.vehicle_id}<br>
+👤 ${v.driver}<br>
+🔋 Start: ${v.start}%<br>
+⚡ Charging: ${v.energy_added}%<br>
+⏳ In Progress...
+</div>`;
+});
+
+/* COMPLETED */
+let comp=document.getElementById("completed"); comp.innerHTML="";
+data.completed.forEach(v=>{
+comp.innerHTML+=`
+<div class="card">
+🚗 ${v.vehicle_id}<br>
+👤 ${v.driver}<br>
+🔋 Start: ${v.battery_start}%<br>
+⚡ Added: ${v.energy_added}%<br>
+💰 Bill: ₹${v.bill}
+</div>`;
+});
+
+/* CYBER LOG */
+let logs=document.getElementById("logTable"); logs.innerHTML="";
+data.logs.forEach(l=>{
+logs.innerHTML+=`<tr>
+<td>${l.time}</td>
+<td>${l.event}</td>
+<td>${l.details}</td>
+</tr>`;
+});
+
+/* ATTACK LOG */
+let at=document.getElementById("attackTable"); at.innerHTML="";
+data.attack_logs.forEach(a=>{
+at.innerHTML+=`<tr style="color:red;">
+<td>${a.event.split(" ")[0]}</td>
+<td>${a.details}</td>
+<td>${a.time}</td>
+</tr>`;
+});
+
+updateChart(data);
+
+});
+}
+
+/* INIT */
+initChart();
+setInterval(fetchData,1000);
+
+</script>
+
+</body>
+</html>
