@@ -381,34 +381,6 @@
 
         .hidden { display: none !important; }
         .loading { opacity: 0.5; pointer-events: none; }
-
-        .threat-low{
-    border-color:#22c55e !important;
-    color:#22c55e !important;
-}
-
-.threat-medium{
-    border-color:#facc15 !important;
-    color:#facc15 !important;
-}
-
-.threat-high{
-    border-color:#f97316 !important;
-    color:#f97316 !important;
-}
-
-.threat-critical{
-    border-color:#ef4444 !important;
-    color:#ef4444 !important;
-    animation:pulseThreat 1s infinite;
-    box-shadow:0 0 20px #ef4444;
-}
-
-@keyframes pulseThreat{
-    0%{transform:scale(1);}
-    50%{transform:scale(1.05);}
-    100%{transform:scale(1);}
-}
     </style>
 </head>
 <body>
@@ -461,9 +433,7 @@
         <div class="header-left">
             <h1>⚡ EV Charging Command Center</h1>
             <span class="status-badge">🟢 SYSTEM ONLINE</span>
-            <span class="status-badge threat-low" id="threatBadge">
-    Threat: LOW | Risk: 25%
-</span>
+            <span class="threat-level threat-low" id="threatLevel">Threat: LOW</span>
         </div>
         <div class="header-right">
             <div class="user-info">
@@ -639,8 +609,7 @@
             data: {
                 labels: ["Replay", "Fake", "Missing", "DoS"],
                 datasets: [{
-                    label: 'Attack Count',
-                    data: [0,0,0,0],
+                    data: [0, 0, 0, 0],
                     backgroundColor: ["#38bdf8", "#f87171", "#facc15", "#34d399"],
                     borderColor: ["#0ea5e9", "#ef4444", "#eab308", "#10b981"],
                     borderWidth: 2
@@ -719,47 +688,12 @@
             });
 
             // Update attack logs
-            // Update attack logs
-let attacks = document.getElementById("attackLogsDisplay");
+            let attacks = document.getElementById("attackLogsDisplay");
+            attacks.innerHTML = "";
+            data.attack_logs.slice(-5).forEach(a => {
+                attacks.innerHTML += `<div class="card" style="border-left-color:#ef4444;">⚠️ ${a.event}</div>`;
+            });
 
-if(attacks){
-
-    attacks.innerHTML = "";
-
-    data.attack_logs.slice(-5).reverse().forEach(a => {
-
-        attacks.innerHTML += `
-        <div class="card" style="
-            border-left:4px solid #ef4444;
-            margin-bottom:12px;
-            padding:12px;
-        ">
-
-            <div style="
-                font-weight:bold;
-                color:#ff4d4d;
-                margin-bottom:6px;
-            ">
-                ⚠️ ${a.event}
-            </div>
-
-            <div style="
-                font-size:13px;
-                line-height:1.6;
-            ">
-                <div><b>IP:</b> ${a.ip}</div>
-                <div><b>Target:</b> ${a.target}</div>
-                <div><b>Severity:</b> ${a.severity}</div>
-                <div><b>Impact:</b> ${a.impact}</div>
-                <div><b>Status:</b> ${a.status}</div>
-                <div><b>Blocked By:</b> ${a.prevention}</div>
-                <div><b>Time:</b> ${a.time}</div>
-            </div>
-
-        </div>
-        `;
-    });
-}
             // Update chart
             let c_map = {Replay: 0, Fake: 0, Missing: 0, DoS: 0};
             data.attack_logs.forEach(a => {
@@ -772,39 +706,6 @@ if(attacks){
                 chart.data.datasets[0].data = [c_map.Replay, c_map.Fake, c_map.Missing, c_map.DoS];
                 chart.update();
             }
-
-            const totalAttacks =
-    c_map.Replay +
-    c_map.Fake +
-    c_map.Missing +
-    c_map.DoS;
-
-let level = "LOW";
-let risk = 25;
-let cls = "threat-low";
-
-if(totalAttacks >= 8){
-    level = "CRITICAL";
-    risk = 95;
-    cls = "threat-critical";
-}
-else if(totalAttacks >= 5){
-    level = "HIGH";
-    risk = 75;
-    cls = "threat-high";
-}
-else if(totalAttacks >= 2){
-    level = "MEDIUM";
-    risk = 50;
-    cls = "threat-medium";
-}
-
-const badge = document.getElementById("threatBadge");
-
-if(badge){
-    badge.className = `status-badge ${cls}`;
-    badge.innerHTML = `Threat: ${level} | Risk: ${risk}%`;
-}
         } catch (e) {
             console.error('Error fetching data:', e);
         }

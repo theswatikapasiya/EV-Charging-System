@@ -176,63 +176,17 @@ def log_attack_to_db(attack_type, source_ip='127.0.0.1', target='Billing System'
 
 @app.route("/attack/<atype>")
 def attack(atype):
-
-    attack_info = {
-        "dos": {
-            "impact": "Server flooding attempt detected",
-            "severity": "HIGH",
-            "target": "Charging Gateway",
-            "prevention": "Rate limiting + ML traffic filtering"
-        },
-
-        "fake": {
-            "impact": "Fake energy injection detected",
-            "severity": "CRITICAL",
-            "target": "Billing System",
-            "prevention": "ML payload validation"
-        },
-
-        "replay": {
-            "impact": "Repeated packet replay attempt",
-            "severity": "MEDIUM",
-            "target": "Session Authentication",
-            "prevention": "Nonce validation + Timestamp verification"
-        },
-
-        "missing": {
-            "impact": "Packet loss / interruption detected",
-            "severity": "LOW",
-            "target": "Charging Session",
-            "prevention": "Session monitoring recovery"
-        }
-    }
-
-    info = attack_info.get(atype.lower(), {
-        "impact": "Unknown anomaly",
-        "severity": "LOW",
-        "target": "System",
-        "prevention": "Monitoring"
-    })
-
+    """Log attack event (DoS, Fake, Replay, etc)"""
+    # Log to database
+    log_attack_to_db(atype.lower())
+    
+    # Also maintain in-memory for frontend
     attack_logs.append({
-    "type": atype.upper(),
-    "event": f"{atype.upper()} ATTACK DETECTED",
-    "ip": request.remote_addr or "127.0.0.1",
-    "target": info.get("target", "System"),
-    "impact": info.get("impact", "Unknown Impact"),
-    "severity": info.get("severity", "LOW"),
-    "prevention": info.get("prevention", "Monitoring"),
-    "status": "BLOCKED",
-    "time": time.strftime("%Y-%m-%d %H:%M:%S")
-})
-    log_attack_to_db(
-    atype,
-    source_ip=request.remote_addr or "127.0.0.1",
-    target=info.get("target", "System"),
-    severity=info.get("severity", "LOW"),
-    description=info.get("impact", "Attack detected")
-)
-
+        "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "event": f"{atype.upper()} ATTACK DETECTED",
+        "details": "Source IP: 127.0.0.1 | Target: Billing System | Blocked via ML Validation"
+    })
+    
     return jsonify({"status": "attack logged"})
 
 
