@@ -1,142 +1,169 @@
-# ⚡ EV Charging Command Center
+# 🚗⚡ EV Charging Command Center
+## Enterprise AI-Powered EV Security & Smart Charging Platform
 
-A real-time simulation of an EV charging station integrated with cyber attack detection and smart energy management.
-
----
-
-## 🚀 Features
-
-### 🔌 Smart Charging System
-- Vehicles enter a waiting queue (Entered panel)
-- Automatically move to Charging panel
-- Charging progresses dynamically
-- Final bill calculated and shown in Completed panel
+An enterprise-grade EV charging management and cybersecurity platform designed to simulate, monitor, analyze, and secure EV charging infrastructures using Machine Learning, Blockchain-style logging, Real-Time Analytics, and Threat Detection Systems.
 
 ---
 
-### 🧾 Vehicle Details
-- Vehicle Number (validated using Indian number plate format)
-- Driver Name
-- Battery percentage
-- Charging progress & billing
+# 📌 Project Overview
+
+The EV Charging Command Center is a real-time cybersecurity-integrated EV charging station management system that combines:
+
+- ⚡ Smart EV charging simulation
+- 🛡️ AI-powered cyber attack detection
+- ⛓️ Blockchain-style immutable logging
+- 📊 Advanced analytics dashboard
+- 🌐 Real-time WebSocket communication
+- 🤖 Machine Learning anomaly detection
+- 💳 QR-based billing and payment simulation
+- 👨‍💼 Admin security control center
+
+The platform continuously monitors charging sessions, user activity, network requests, and simulated cyber threats while maintaining operational efficiency and charging optimization.
 
 ---
 
-### 🧠 Cyber Attack Detection
-Simulates and detects multiple attack types:
+# 🎯 Key Features
 
-- Replay Attack  
-- Fake Data Injection  
-- DoS Attack  
-- Missing Data Attack  
-
-✔️ Attacks are detected and blocked using validation logic  
-✔️ Logs are generated in real-time  
-
----
-
-### 📊 Attack Visualization
-- Real-time bar graph (Chart.js)
-- Different colors for different attacks
-- Hover shows:
-  - Target system
-  - Impact
-  - Prevention method
+## ⚡ Smart Charging System
+- Real-time EV charging queue management
+- Dynamic charging session tracking
+- Battery monitoring and charging analytics
+- Charging demand prediction
+- Smart energy optimization
+- Queue congestion analysis
+- Automated billing calculations
 
 ---
 
-### 📜 Logs System
-
-#### 🔴 Attack Logs
-- Type, Details, Timestamp
-
-#### 🟢 Cyber Logs
-- Charging completion records
-- Energy added and billing details
-
----
-
-## 🛠️ Tech Stack
-
-- Frontend: HTML, CSS, JavaScript (Chart.js)
-- Backend: Flask (Python)
-- Simulation: Randomized EV flow + attack scripts
+## 🛡️ AI-Powered Cybersecurity Layer
+- Machine Learning based anomaly detection
+- Isolation Forest attack detection model
+- Detection of:
+  - DoS Attacks
+  - Fake Data Injection
+  - Replay Attacks
+  - Missing Packet Attacks
+- Threat severity scoring
+- Risk analysis engine
+- Automatic suspicious request blocking
+- IP reputation tracking system
 
 ---
 
-## 📂 Project Structure
-
-EVproject/
-
-├── app.py  
-├── templates/  
-│   └── index.html  
-├── attacks/  
-│   ├── dos_attack.py  
-│   ├── fake_data_attack.py  
-│   └── replay_attack.py  
+## ⛓️ Blockchain Security & Immutable Logging
+- SHA256 blockchain-style hash chaining
+- Tamper-proof audit logging
+- Secure transaction verification
+- Blockchain integrity validation
+- Immutable attack logging
+- Cryptographic event verification
 
 ---
 
-## ⚙️ How to Run
-
-1. Install dependencies:
-pip install flask
-
-2. Run the server:
-python app.py
-
-3. Open in browser:
-http://127.0.0.1:5000
-
----
-
-## 🌐 Live Demo
-
-Currently runs on local server.
-
-To view demo:
-1. Clone the repository
-2. Run python app.py
-3. Open http://127.0.0.1:5000
+## 📊 Real-Time Analytics Dashboard
+- Live charging analytics
+- Real-time revenue tracking
+- Energy consumption monitoring
+- Threat heatmaps
+- Attack frequency visualization
+- Peak charging hour analysis
+- System efficiency metrics
+- Interactive Chart.js visualizations
 
 ---
 
-## 🧪 Simulating Attacks
-
-Run attack scripts:
-
-python attacks/dos_attack.py  
-python attacks/fake_data_attack.py  
-python attacks/replay_attack.py  
-
----
-
-## 🔐 Security Concept
-
-- Input validation prevents fake energy injection
-- Replay detection through repeated payload patterns
-- DoS monitored via rapid request spikes
-- All attacks are logged and visualized
+## 🌐 Real-Time Communication
+- Flask-SocketIO integration
+- Live dashboard synchronization
+- Real-time attack notifications
+- Dynamic threat updates
+- Instant charging session updates
+- WebSocket-based event broadcasting
 
 ---
 
-## 📌 Future Scope
-
-- Payment Gateway Integration (UPI / Cards)
-- Mobile App Integration
-- Cloud Deployment
-- AI-based anomaly detection
-
----
-
-## 👩‍💻 Author
-
-Swati Kapasiya  
-B.Tech CSE (Cyber Security)
+## 👨‍💼 Enterprise Admin Control Center
+- System health monitoring
+- Blockchain verification controls
+- Security testing controls
+- Queue reset management
+- Report generation
+- IP blocking center
+- Threat monitoring panel
 
 ---
 
-## 🌟 Project Goal
+# 🏗️ System Architecture
 
-To demonstrate how EV infrastructure can be secured against cyber threats while maintaining efficient real-time operations.
+## Backend
+- Flask 2.3.3
+- Flask-SocketIO
+- SQLAlchemy ORM
+- JWT Authentication
+- SQLite Database
+
+## Frontend
+- HTML5
+- CSS3
+- JavaScript
+- Chart.js
+- Cyberpunk Neon UI
+
+## Machine Learning
+- Scikit-learn
+- Isolation Forest
+- Feature Extraction Pipeline
+- Anomaly Classification Engine
+
+## Security
+- SHA256 Cryptographic Hashing
+- JWT Token Authentication
+- Role-Based Access Control
+- Blockchain-style Secure Logging
+
+---
+
+# 🧠 Machine Learning Workflow
+
+The system uses an Isolation Forest anomaly detection model to analyze charging requests and network traffic.
+
+### Features Extracted:
+- Charging energy values
+- Request frequency
+- Payload size
+- Request intervals
+- Session duration
+- Repeated packet patterns
+
+### ML Pipeline:
+1. Request enters the server
+2. Features are extracted
+3. Isolation Forest evaluates anomaly score
+4. Threat classification is performed
+5. Attack is logged
+6. IP reputation score is updated
+7. Threat is displayed on dashboard
+8. Blockchain log entry is generated
+
+---
+
+# 🔐 Cybersecurity Workflow
+
+## Attack Detection Flow
+
+```text
+Incoming Request
+       ↓
+ML Anomaly Detection
+       ↓
+Threat Classification
+       ↓
+Risk Scoring
+       ↓
+Attack Logging
+       ↓
+Blockchain Verification
+       ↓
+Automatic Blocking
+       ↓
+Dashboard Visualization
