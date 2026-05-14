@@ -167,3 +167,234 @@ Blockchain Verification
 Automatic Blocking
        ↓
 Dashboard Visualization
+```
+
+---
+
+# 📊 Dashboard Modules
+
+## 📌 Dashboard Tab
+- Vehicle queue management
+- Active charging sessions
+- Completed sessions
+- Attack distribution graphs
+- System logs
+
+## 🛡️ Security Tab
+- Threat heatmap
+- Suspicious IP table
+- Attack timeline
+- Threat level meter
+- Risk score monitoring
+
+## 📈 Analytics Tab
+- Revenue trends
+- Charging volume analysis
+- Attack frequency analysis
+- System efficiency metrics
+- Average charging time
+
+## ⚡ Charging Tab
+- Smart charging management
+- Energy allocation
+- Wait time estimation
+- Charging optimization
+
+## 👨‍💼 Admin Tab
+- System controls
+- Blockchain verification
+- Queue reset
+- Export reports
+- Security test triggers
+- IP blocking center
+
+---
+
+# 🗃️ Database Models
+
+The platform uses SQLAlchemy ORM with multiple interconnected models:
+
+| Model | Purpose |
+|------|------|
+| User | Authentication & RBAC |
+| Vehicle | Vehicle queue tracking |
+| ChargingSession | Charging analytics |
+| AttackLog | Cyber attack records |
+| Payment | Billing & QR payments |
+| Analytics | System metrics |
+| CryptoSecureLog | Blockchain logs |
+
+---
+
+# 📡 API Endpoints
+
+## Authentication
+
+```http
+POST /auth/register
+POST /auth/login
+POST /auth/logout
+```
+
+## Charging System
+
+```http
+POST /add_vehicle
+POST /start
+POST /stop
+GET /status
+```
+
+## Security APIs
+
+```http
+GET /api/security/threat-level
+GET /api/security/threat-heatmap
+GET /api/security/ip-reputation
+GET /api/security/attacks/timeline
+```
+
+## Analytics APIs
+
+```http
+GET /analytics/dashboard
+GET /analytics/revenue/total
+GET /analytics/charging/efficiency
+```
+
+## Blockchain APIs
+
+```http
+GET /blockchain/verify-chain
+GET /blockchain/stats
+```
+
+---
+
+# 🧪 Attack Simulation
+
+The system includes attack simulation scripts for cybersecurity testing.
+
+## Simulated Attacks
+- DoS Attack
+- Fake Data Injection
+- Replay Attack
+- Missing Packet Attack
+
+## Run Attack Scripts
+
+```bash
+cd attacks
+
+python3 dos_attack.py
+python3 fake_data_attack.py
+python3 replay_attack.py
+```
+
+These attacks are automatically:
+- detected by ML
+- classified
+- logged
+- visualized
+- blocked by the system
+
+---
+
+# 🚀 Installation & Setup
+
+## Clone Repository
+
+```bash
+git clone https://github.com/theswatikapasiya/EV-Charging-System.git
+cd EV-Charging-System
+```
+
+---
+
+## Create Virtual Environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+---
+
+## Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Start Server
+
+```bash
+cd ev-secure-charging/server
+python3 app.py
+```
+
+Server runs on:
+
+```text
+http://localhost:5000
+```
+
+---
+
+# 🔑 Default Credentials
+
+## Admin Login
+
+```text
+Username: admin
+Password: admin123
+```
+
+
+---
+
+# 📁 Project Structure
+
+```text
+EV-Charging-System/
+│
+├── attacks/
+│   ├── dos_attack.py
+│   ├── fake_data_attack.py
+│   └── replay_attack.py
+│
+├── ev-secure-charging/
+│   └── server/
+│       ├── app.py
+│       ├── models.py
+│       ├── analytics.py
+│       ├── blockchain_logger.py
+│       ├── ml_model.py
+│       ├── security_apis.py
+│       ├── websocket_events.py
+│       ├── templates/
+│       ├── static/
+│       └── database.db
+│
+├── README.md
+└── requirements.txt
+```
+
+
+
+---
+
+
+# 📜 License
+
+This project is developed for educational and research purposes.
+
+---
+
+# ⭐ Final Note
+
+This platform demonstrates how modern EV charging infrastructures can be protected using AI-driven cybersecurity systems, blockchain verification mechanisms, and intelligent monitoring architectures.
+
+The project focuses on building a secure, scalable, and intelligent EV ecosystem capable of detecting and mitigating cyber threats in real time.
