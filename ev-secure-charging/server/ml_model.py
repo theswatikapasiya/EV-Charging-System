@@ -357,3 +357,44 @@ except Exception as e:
     print(f"⚠️  ML Model initialization delayed: {e}")
     iso_forest = None
     scaler = None
+
+# ==================== VEHICLE VALIDATION ====================
+
+def validate_vehicle_ml(vehicle_id, driver, battery):
+    """Simulate ML clustering and Government RTO Validation"""
+    # 1. Government RTO Validation Simulation
+    import random
+    
+    rto_status = {
+        'owner_type': random.choice(['Private', 'Commercial', 'Government']),
+        'registration_valid': True,
+        'insurance_status': 'Active' if random.random() > 0.1 else 'Expired',
+        'blacklist_flag': False
+    }
+    
+    # 2. ML Clustering / Outlier Detection (Simulated for strings/formats)
+    anomaly_score = 0
+    confidence = 100
+    
+    # Suspicious if insurance expired
+    if rto_status['insurance_status'] == 'Expired':
+        anomaly_score += 0.3
+        
+    # Format outlier analysis (e.g. DL99ZZ9999 vs normal patterns)
+    if len(vehicle_id) > 10:
+        anomaly_score += 0.4
+        confidence -= 10
+        
+    if "XXX" in vehicle_id or "0000" in vehicle_id:
+        rto_status['blacklist_flag'] = True
+        anomaly_score += 0.8
+        
+    is_anomalous = anomaly_score > 0.5 or rto_status['blacklist_flag']
+    
+    return {
+        'is_anomalous': is_anomalous,
+        'anomaly_score': min(1.0, anomaly_score),
+        'confidence': confidence,
+        'rto_status': rto_status,
+        'threat_type': 'Stolen/Blacklisted' if rto_status['blacklist_flag'] else 'Format Outlier' if is_anomalous else None
+    }

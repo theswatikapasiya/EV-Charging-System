@@ -1,0 +1,55 @@
+# EV Charging Command Center - Python Dependencies
+# ===================================================
+# Enterprise-grade AI-powered EV charging management platform
+# All packages are production-ready and actively maintained
+
+# Web Framework
+Flask==2.3.3
+Flask-SocketIO==5.6.1
+python-socketio==5.9.0
+python-engineio==4.7.1
+
+# Database & ORM
+Flask-SQLAlchemy==3.0.5
+SQLAlchemy==1.4.48
+
+# Authentication & Security
+PyJWT==2.8.1
+Werkzeug==2.3.7
+python-dotenv==1.0.0
+
+# Machine Learning & Data Processing
+scikit-learn==1.3.2
+numpy==1.24.3
+pandas==2.0.3
+joblib==1.3.2
+
+# Data Visualization
+matplotlib==3.7.2
+plotly==5.16.1
+Chart.js==4.4.0  # Frontend, loaded via CDN
+
+# Payment & QR Code
+qrcode==7.4.2
+Pillow==10.0.0
+
+# Real-time Communication
+python-socketio==5.9.0
+python-engineio==4.7.1
+
+# Development & Testing
+pytest==7.4.2
+pytest-cov==4.1.0
+flask-testing==0.8.1
+
+# Deployment
+gunicorn==21.2.0
+python-multipart==0.0.6
+
+# Advanced Features
+requests==2.31.0
+cryptography==41.0.4
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3

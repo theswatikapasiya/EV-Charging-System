@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ EV Command Center | Enterprise Security Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- ============== AUTHENTICATION SECTION ============== -->
+<div class="auth-container" id="authContainer">
+    <div class="auth-box">
+        <div id="loginForm">
+            <h1>⚡ System Login</h1>
+            <p>Enterprise EV Charging Command Center</p>
+            <div id="loginError" class="auth-error hidden-auth"></div>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="loginUsername" placeholder="Enter username" />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter password" />
+            </div>
+            <div class="form-group">
+                <button type="button" onclick="handleLogin()">🔓 Login</button>
+            </div>
+            <div class="toggle-form">
+                Create new account? <span onclick="showRegisterForm()">Register</span>
+            </div>
+        </div>
+
+        <div id="registerForm" class="hidden-auth">
+            <h1>⚡ New Account</h1>
+            <p>Create Enterprise Access Account</p>
+            <div id="regError" class="auth-error hidden-auth"></div>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="regUsername" placeholder="Enter username" />
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="regEmail" placeholder="Enter email" />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="regPassword" placeholder="Enter password" />
+            </div>
+            <div class="form-group">
+                <button type="button" onclick="handleRegister()">✓ Register</button>
+            </div>
+            <div class="toggle-form">
+                Already have account? <span onclick="showLoginForm()">Login</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============== DASHBOARD SECTION ============== -->
+<div class="dashboard-hidden" id="dashboard">
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-left">
+            <h1>⚡ EV COMMAND CENTER</h1>
+            <span class="status-badge">🟢 ACTIVE</span>
+            <span class="threat-badge threat-low" id="threatBadge">🛡️ THREAT: LOW</span>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <div><span class="user-name" id="userName">User</span></div>
+                <div id="userRole">Role: User</div>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()">🔒 Logout</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <div class="tagline">
+            🔒 Enterprise Security | 🤖 AI-Powered Detection | ⛓️ Blockchain-Secured | 📊 Real-Time Analytics
+        </div>
+
+        <!-- TAB NAVIGATION -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+            <button class="tab" onclick="switchTab('security')">🛡️ Security</button>
+            <button class="tab" onclick="switchTab('analytics')">📈 Analytics</button>
+            <button class="tab" onclick="switchTab('charging')">⚡ Charging</button>
+            <button class="tab" onclick="switchTab('admin')">👨‍💼 Admin</button>
+        </div>
+
+        <!-- ============== TAB 1: DASHBOARD ============== -->
+        <div class="tab-content active" id="tab-dashboard">
+            <h2 class="page-title">System Overview</h2>
+
+            <!-- Key Metrics Grid -->
+            <div class="grid grid-4" id="adminMetricsGrid">
+                <div class="metric-box">
+                    <div class="metric-value" id="totalVehicles">0</div>
+                    <div class="metric-label">Total Vehicles</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="activeSessions">0</div>
+                    <div class="metric-label">Active Sessions</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="totalAttacks">0</div>
+                    <div class="metric-label">Total Attacks</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="blockRate">0%</div>
+                    <div class="metric-label">Block Rate</div>
+                </div>
+            </div>
+
+            <!-- Vehicle Queue Panels -->
+            <div class="grid grid-3">
+                <div class="card">
+                    <h3>🚗 Queue (Waiting)</h3>
+                    <div id="queueContainer"></div>
+                </div>
+                <div class="card">
+                    <h3>⚡ Charging (Active)</h3>
+                    <div id="chargingContainer"></div>
+                </div>
+                <div class="card">
+                    <h3>✅ Completed</h3>
+                    <div id="completedContainer"></div>
+                </div>
+            </div>
+
+            <!-- Add Vehicle Section -->
+            <div class="card">
+                <h3>➕ Add Vehicle to Queue</h3>
+                <div class="input-group">
+                    <input type="text" id="carNumber" placeholder="License Plate (e.g., DL01AB1234)" />
+                    <input type="text" id="driverName" placeholder="Driver Name" />
+                    <input type="number" id="battery" placeholder="Current Battery %" min="10" max="100" />
+                    <button class="btn btn-primary btn-small" onclick="addVehicle()">+ Add Vehicle</button>
+                </div>
+                <div id="addVehicleMsg"></div>
+            </div>
+
+            <!-- Attack Chart -->
+            <div class="grid grid-2" id="adminAttackGrid">
+                <div class="chart-container">
+                    <h3>📊 Attack Distribution</h3>
+                    <canvas id="attackChart"></canvas>
+                </div>
+                <div class="card">
+    <h3>⚠ Recent Attacks</h3>
+
+    <div id="recentAttacksContainer">
+
+    </div>
+</div>
+            </div>
+
+            <!-- System Logs -->
+            <div class="card">
+                <h3>📜 System Logs</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Event</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="systemLogsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============== TAB 2: SECURITY ============== -->
+        <div class="tab-content" id="tab-security">
+            <h2 class="page-title">🛡️ Security Center</h2>
+
+            <!-- Threat Intelligence Panel -->
+            <div class="grid grid-3">
+                <div class="card">
+                    <h3>⚠️ Threat Level</h3>
+                    <div class="metric-value" id="threatLevel" style="color: #34d399;">LOW</div>
+                    <p style="color: #94a3b8; margin-top: 10px; font-size: 12px;">Risk Score: <span id="riskScore">25</span>%</p>
+                </div>
+                <div class="card">
+                    <h3>🚨 Recent Attacks</h3>
+                    <div class="metric-value" id="recentAttacksCount">0</div>
+                    <p style="color: #94a3b8; margin-top: 10px; font-size: 12px;">Last 5 minutes</p>
+                </div>
+                <div class="card">
+                    <h3>✓ Blocked</h3>
+                    <div class="metric-value" id="blockedCount">0</div>
+                    <p style="color: #94a3b8; margin-top: 10px; font-size: 12px;">Attack Prevention</p>
+                </div>
+            </div>
+
+            <!-- IP Reputation -->
+            <div class="card">
+                <h3>🌐 Top Suspicious IPs</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Attacks</th>
+                                <th>Risk Level</th>
+                                <th>Last Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ipReputationTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Attack Timeline -->
+            <div class="card">
+                <h3>📅 Attack Timeline (Last 24h)</h3>
+                <div id="attackTimelinePanel"></div>
+            </div>
+
+            <!-- Threat Heatmap -->
+            <div class="chart-container">
+                <h3>🔥 Threat Heatmap by System</h3>
+                <div id="threatHeatmapChart"></div>
+            </div>
+        </div>
+
+        <!-- ============== TAB 3: ANALYTICS ============== -->
+        <div class="tab-content" id="tab-analytics">
+            <h2 class="page-title">📈 Advanced Analytics</h2>
+
+            <!-- Key Metrics -->
+            <div class="grid grid-4">
+                <div class="metric-box">
+                    <div class="metric-value" id="totalRevenue">₹0</div>
+                    <div class="metric-label">Total Revenue</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="totalEnergy">0 kWh</div>
+                    <div class="metric-label">Total Energy Sold</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="efficiency">0%</div>
+                    <div class="metric-label">System Efficiency</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="avgChargeTime">0m</div>
+                    <div class="metric-label">Avg Charge Time</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-2">
+                <div class="chart-container">
+                    <h3>⚡ Hourly Charging Volume</h3>
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>💰 Revenue Trend</h3>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Attack Frequency -->
+            <div class="chart-container">
+                <h3>📊 Attack Frequency Over Time</h3>
+                <canvas id="attackFrequencyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ============== TAB 4: CHARGING ============== -->
+        <div class="tab-content" id="tab-charging">
+            <h2 class="page-title">⚡ Smart Charging Management</h2>
+
+            <!-- Predictive Charging -->
+            <div class="card">
+                <h3>🔮 Charging Demand Prediction</h3>
+                <div class="grid grid-3">
+                    <div>
+                        <p style="color: #94a3b8; font-size: 12px;">Current Load</p>
+                        <p style="color: #00f5ff; font-size: 18px; font-weight: bold;" id="currentLoad">0%</p>
+                    </div>
+                    <div>
+                        <p style="color: #94a3b8; font-size: 12px;">Predicted Wait Time</p>
+                        <p style="color: #00f5ff; font-size: 18px; font-weight: bold;" id="waitTime">0 min</p>
+                    </div>
+                    <div>
+                        <p style="color: #94a3b8; font-size: 12px;">Recommendation</p>
+                        <p style="color: #00f5ff; font-size: 18px; font-weight: bold;" id="recommendation">Normal</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Energy Optimization -->
+            <div class="card">
+                <h3>🔋 Smart Energy Distribution</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Session ID</th>
+                                <th>Priority</th>
+                                <th>Power Allocated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="energyAllocationTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============== TAB 5: ADMIN ============== -->
+        <div class="tab-content" id="tab-admin">
+            <h2 class="page-title">👨‍💼 Admin Control Center</h2>
+
+            <!-- System Health -->
+            <div class="grid grid-4">
+                <div class="metric-box">
+                    <div class="metric-value" id="systemHealth">99%</div>
+                    <div class="metric-label">System Health</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="cpuUsage">35%</div>
+                    <div class="metric-label">CPU Usage</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="memoryUsage">42%</div>
+                    <div class="metric-label">Memory Usage</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value" id="apiLatency">12ms</div>
+                    <div class="metric-label">API Latency</div>
+                </div>
+            </div>
+
+            <!-- Admin Actions -->
+            <div class="card">
+                <h3>🎮 System Controls</h3>
+                <div class="grid grid-2">
+                    <button class="btn btn-danger" onclick="dashboard.resetQueue()">🚫 Reset Queue</button>
+                    <button class="btn btn-danger" onclick="dashboard.triggerSecurityTest()">🔥 Trigger Security Test</button>
+                    <button class="btn btn-primary" onclick="dashboard.exportReport()">📊 Export Report</button>
+                    <button class="btn btn-primary" onclick="dashboard.syncBlockchain()">🔄 Sync Blockchain</button>
+                </div>
+            </div>
+
+            <!-- Ban IPs -->
+            <div class="card">
+                <h3>⛔ IP Blocking</h3>
+                <div class="input-group">
+                    <input type="text" id="banIPInput" placeholder="Enter IP to ban (e.g., 192.168.1.100)" />
+                    <button class="btn btn-danger btn-small" onclick="banIP()">🚫 Ban IP</button>
+                </div>
+            </div>
+
+            <!-- Blockchain Verification -->
+            <div class="card">
+                <h3>⛓️ Blockchain Status</h3>
+                <p id="blockchainStatus" style="color: #34d399; font-weight: bold;">✓ Chain Valid</p>
+                <p style="color: #94a3b8; margin-top: 10px;">Last verified: <span id="lastBlockchainCheck">N/A</span></p>
+                <button class="btn btn-primary mt-20" onclick="dashboard.verifyBlockchain()">🔐 Verify Now</button>
+            </div>
+            
+            <!-- Enterprise Blockchain Ledger -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>⛓️ Enterprise Blockchain Ledger</h3>
+                <div id="blockchainLedger" style="overflow-y:auto;max-height:400px;display:flex;flex-direction:column;gap:10px;padding:10px;background:#0f172a;border-radius:8px;">
+                    <p style="text-align:center;color:#94a3b8;">Loading blockchain data...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ============== SCRIPTS ============== -->
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

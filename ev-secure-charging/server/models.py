@@ -114,7 +114,9 @@ class ChargingSession(db.Model):
     def estimate_completion_time(self):
         """Estimate when charging will complete"""
         battery_needed = 100 - self.initial_battery
-        time_needed = battery_needed / (self.charging_rate / self.battery_capacity * 100)
+        # Fallback to 100 if vehicle is not attached yet
+        capacity = self.vehicle.battery_capacity if self.vehicle else 100.0
+        time_needed = battery_needed / (self.charging_rate / capacity * 100)
         self.estimated_completion = datetime.utcnow() + timedelta(minutes=time_needed)
         return self.estimated_completion
     

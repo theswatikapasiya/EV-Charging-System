@@ -630,6 +630,13 @@
             console.log('Attack detected:', data);
             fetchData();
         });
+        socket.on('disconnect', () => {
+    console.log("Socket disconnected");
+});
+
+socket.on('connect', () => {
+    console.log("Socket reconnected");
+});
     }
 
     // ==================== CHART ====================
@@ -666,6 +673,13 @@
             document.getElementById("msg").textContent = "All fields required";
             return;
         }
+        const vehicleRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
+
+        if(!vehicleRegex.test(car)){
+            document.getElementById("msg").textContent =
+            "Invalid vehicle number format";
+        return;
+       }
 
         try {
             const response = await fetch("/add_vehicle", {
@@ -702,7 +716,8 @@
             let c = document.getElementById("charging");
             c.innerHTML = "";
             data.charging.forEach(v => {
-                c.innerHTML += `<div class="card">🚗 ${v.vehicle_id}<br>👤 ${v.driver}<br>⚡ ${v.energy_added}%</div>`;
+                c.innerHTML += `<div class="card">🚗 ${v.vehicle_id}<br>👤 ${v.driver}<br>🔋 ${v.current_battery}%
+⚡ +${v.energy_added}%</div>`;
             });
 
             let comp = document.getElementById("completed");

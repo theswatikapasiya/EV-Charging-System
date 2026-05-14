@@ -6,10 +6,22 @@ import random
 import uuid
 from datetime import datetime, timedelta
 import os
+import re
+from blockchain_logger import create_blockchain_log
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
 
+entered = []
+charging = []
+completed = []
+logs = []
+
+attack_stats = {
+    "Replay": 0,
+    "Fake": 0,
+    "Missing": 0,
+    "DoS": 0
+}
 # ============ FLASK CONFIGURATION ============
 app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -51,7 +63,30 @@ def init_sample_data():
             db.session.add(operator)
             
             db.session.commit()
-
+            
+            # Add the initial queue cars to the database and blockchain
+            operator = User.query.filter_by(role='operator').first()
+            if operator:
+                for v in entered:
+                    db_v = Vehicle(
+                        vehicle_id=v['vehicle_id'],
+                        user_id=operator.id,
+                        driver_name=v['driver'],
+                        current_battery=v['battery'],
+                        battery_percentage=v['battery'],
+                        status='idle'
+                    )
+                    db.session.add(db_v)
+                    try:
+                        create_blockchain_log(
+                            event_type='vehicle_added',
+                            description=f"Vehicle {v['vehicle_id']} registered to driver {v['driver']}",
+                            user_id=operator.id,
+                            ip_address='127.0.0.1'
+                        )
+                    except:
+                        pass
+                db.session.commit()
 
 # ===== IN-MEMORY LISTS (FOR REAL-TIME DISPLAY) =====
 # These maintain the original functionality for the frontend
@@ -59,6 +94,7 @@ entered = []
 charging = []
 completed = []
 logs = []
+logs.clear()
 attack_logs = []
 
 
@@ -112,16 +148,14 @@ def log_attack_to_db(attack_type, source_ip='127.0.0.1', target='Billing System'
         # Log to crypto secure logs
         try:
             admin = User.query.filter_by(role='admin').first()
-            secure_log = CryptoSecureLog(
-                event_type='attack',
-                description=f'{attack_type.upper()} ATTACK DETECTED - Blocked',
+            create_blockchain_log(
+                event_type=f'attack_{attack_type}',
+                description=f'{attack_type.upper()} ATTACK DETECTED - Target: {target} | Severity: {severity}',
                 user_id=admin.id if admin else None,
                 ip_address=source_ip
             )
-            secure_log.compute_hash()
-            db.session.add(secure_log)
-        except:
-            pass
+        except Exception as e:
+            print("Blockchain error:", e)
         
         db.session.commit()
         
@@ -174,8 +208,14 @@ def log_attack_to_db(attack_type, source_ip='127.0.0.1', target='Billing System'
 
 # ============ ATTACK ROUTES ============
 
+from security_apis import BANNED_IPS
+
 @app.route("/attack/<atype>")
 def attack(atype):
+    client_ip = request.remote_addr or "127.0.0.1"
+    if client_ip in BANNED_IPS:
+        return jsonify({"status": "error", "message": "IP is banned"}), 403
+
 
     attack_info = {
         "dos": {
@@ -275,6 +315,16 @@ def start():
         db.session.add(session)
         db.session.commit()
         
+        try:
+            create_blockchain_log(
+                event_type='session_started',
+                description=f'Charging session started for {vehicle_id}',
+                user_id=user.id,
+                ip_address=request.remote_addr or '127.0.0.1'
+            )
+        except:
+            pass
+        
     except Exception as e:
         db.session.rollback()
         print(f"Error creating session: {e}")
@@ -373,90 +423,280 @@ def stop():
 
 @app.route("/add_vehicle", methods=["POST"])
 def add_vehicle():
-    """Add new vehicle to queue"""
+
     data = request.json or {}
 
+    vehicle_id = data.get("vehicle_id", "").upper().strip()
+    driver = data.get("driver", "").strip()
+    battery = int(data.get("battery", 0))
+
+    # ===== VEHICLE NUMBER VALIDATION =====
+
+    vehicle_pattern = r"^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$"
+
+    if not re.match(vehicle_pattern, vehicle_id):
+
+        return jsonify({
+            "status": "error",
+            "message": "Invalid vehicle number"
+        }), 400
+
+    # ===== DUPLICATE CHECK =====
+
+    for v in entered + charging:
+
+        if v["vehicle_id"] == vehicle_id:
+
+            return jsonify({
+                "status": "error",
+                "message": "Vehicle already exists"
+            }), 400
+
+    # ===== ML & RTO VALIDATION =====
+    from ml_model import validate_vehicle_ml
+    validation_result = validate_vehicle_ml(vehicle_id, driver, battery)
+    
+    if validation_result['is_anomalous']:
+        log_attack_to_db(
+            'fake_vehicle',
+            description=f"ML Blocked: {validation_result.get('threat_type', 'Suspicious Registration')} (Score: {validation_result['anomaly_score']})",
+            severity='high'
+        )
+        return jsonify({
+            "status": "error",
+            "message": f"Security Block: {validation_result.get('threat_type', 'Vehicle Validation Failed')}"
+        }), 403
+
+    # ===== CREATE VEHICLE =====
+
     vehicle = {
-        "vehicle_id": data["vehicle_id"],
-        "driver": data["driver"],
-        "battery": int(data["battery"])
+        "vehicle_id": vehicle_id,
+        "driver": driver,
+        "battery": battery,
+        "rto_status": validation_result['rto_status']
     }
 
-    # Add to in-memory queue for frontend
     entered.append(vehicle)
-    
-    # Also save to database
+
+    # ===== SAVE TO DATABASE =====
+
     try:
+
         user = User.query.filter_by(role='operator').first() or User.query.first()
+
         if not user:
-            user = User(username='default', email='default@ev.com', role='user')
+
+            user = User(
+                username='default',
+                email='default@ev.com',
+                role='user'
+            )
+
             user.set_password('pass')
+
             db.session.add(user)
             db.session.flush()
-        
+
         db_vehicle = Vehicle(
-            vehicle_id=data["vehicle_id"],
+            vehicle_id=vehicle_id,
             user_id=user.id,
-            driver_name=data["driver"],
-            current_battery=int(data["battery"]),
-            battery_percentage=int(data["battery"]),
+            driver_name=driver,
+            current_battery=battery,
+            battery_percentage=battery,
             status='idle'
         )
+
         db.session.add(db_vehicle)
         db.session.commit()
         
-        # Log to crypto secure logs
-        secure_log = CryptoSecureLog(
-            event_type='vehicle_registration',
-            description=f"Vehicle {data['vehicle_id']} registered: {data['driver']} | Battery: {data['battery']}%",
-            user_id=user.id if user else None
-        )
-        secure_log.compute_hash()
-        db.session.add(secure_log)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error adding vehicle to DB: {e}")
+        # Log to blockchain
+        try:
+            create_blockchain_log(
+                event_type='vehicle_added',
+                description=f'Vehicle {vehicle_id} registered to driver {driver}',
+                user_id=user.id,
+                ip_address=request.remote_addr or '127.0.0.1'
+            )
+        except:
+            pass
 
-    return jsonify({"status": "added"})
+    except Exception as e:
+
+        db.session.rollback()
+
+        print("DB ERROR:", e)
+
+    return jsonify({
+        "status": "success"
+    })
 
 
 # ============ VEHICLE FLOW PROCESSING ============
 
+# ============ VEHICLE FLOW PROCESSING ============
+
 def process():
-    """Main charging simulation loop"""
-    
-    if len(charging) < 5 and entered:
+
+    global entered, charging, completed
+
+    # ===== MOVE VEHICLES TO CHARGING =====
+
+    while len(charging) < 5 and entered:
+
         v = entered.pop(0)
+
         v["start"] = v["battery"]
+        v["current_battery"] = v["battery"]
         v["energy_added"] = 0
+        v["session_id"] = str(uuid.uuid4())
+        
+        # Add to database
+        try:
+            user = User.query.filter_by(role='operator').first() or User.query.first()
+            if not user:
+                user = User(username='default', email='default@ev.com', role='user')
+                user.set_password('pass')
+                db.session.add(user)
+                db.session.flush()
+
+            # Find or create vehicle
+            db_v = Vehicle.query.filter_by(vehicle_id=v["vehicle_id"]).first()
+            if not db_v:
+                db_v = Vehicle(
+                    vehicle_id=v["vehicle_id"],
+                    user_id=user.id,
+                    driver_name=v["driver"],
+                    current_battery=v["battery"],
+                    battery_percentage=v["battery"],
+                    status='charging'
+                )
+                db.session.add(db_v)
+                db.session.flush()
+            else:
+                db_v.status = 'charging'
+
+            cs = ChargingSession(
+                user_id=user.id,
+                vehicle_id=db_v.id,
+                session_id=v["session_id"],
+                initial_battery=v["battery"],
+                status='active'
+            )
+            cs.estimate_completion_time()
+            db.session.add(cs)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("DB Process Start Error:", e)
+
         charging.append(v)
 
-    for v in charging[:]:
-        v["energy_added"] += random.randint(2,5)
+    # ===== CHARGING PROCESS =====
 
-        if v["energy_added"] >= (100 - v["start"]):
+    for v in charging[:]:
+
+        increment = random.randint(2, 5)
+
+        v["energy_added"] += increment
+        v["current_battery"] += increment
+
+        if v["current_battery"] > 100:
+            v["current_battery"] = 100
+
+        # ===== COMPLETE CHARGING =====
+
+        if v["current_battery"] >= 100:
+
             charging.remove(v)
 
             added = 100 - v["start"]
+
             bill = added * 10
 
             completed.append({
+
                 "vehicle_id": v["vehicle_id"],
                 "driver": v["driver"],
                 "battery_start": v["start"],
                 "energy_added": added,
                 "bill": bill
+
+            })
+            
+            # Finalize in DB
+            try:
+                if "session_id" in v:
+                    cs = ChargingSession.query.filter_by(session_id=v["session_id"]).first()
+                    if cs:
+                        cs.status = 'completed'
+                        cs.end_time = datetime.utcnow()
+                        cs.energy_added = added
+                        cs.calculate_cost()
+                        
+                        db_v = Vehicle.query.get(cs.vehicle_id)
+                        if db_v:
+                            db_v.status = 'completed'
+                            db_v.current_battery = 100
+                            db_v.battery_percentage = 100
+                        
+                        # Add payment
+                        user_id = db_v.user_id if db_v else cs.user_id
+                        payment = Payment(
+                            user_id=user_id,
+                            session_id=cs.id,
+                            transaction_id=str(uuid.uuid4()),
+                            amount=bill,
+                            status='completed',
+                            completed_at=datetime.utcnow()
+                        )
+                        db.session.add(payment)
+                        db.session.commit()
+                        
+                        try:
+                            create_blockchain_log(
+                                event_type='payment_processed',
+                                description=f'Payment of ₹{bill} completed for {v["vehicle_id"]}',
+                                user_id=user_id,
+                                ip_address='127.0.0.1'
+                            )
+                        except:
+                            pass
+            except Exception as e:
+                db.session.rollback()
+                print("DB Process End Error:", e)
+
+            logs.append({
+                "time": time.strftime("%H:%M:%S"),
+                "event": "Charging Completed",
+                "details": f"{v['vehicle_id']} | Bill ₹{bill}"
             })
 
             logs.append({
+
                 "time": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "event": "Charging Completed",
                 "details": f"{v['vehicle_id']} | {v['driver']} | Start:{v['start']}% → +{added}% | ₹{bill}"
+
             })
 
+    # ===== AUTO GENERATE VEHICLES =====
+
     while len(entered) < 6:
-        entered.append(generate_vehicle())
+
+        new_vehicle = generate_vehicle()
+
+        duplicate = False
+
+        for v in entered + charging + completed:
+
+            if v["vehicle_id"] == new_vehicle["vehicle_id"]:
+
+                duplicate = True
+                break
+
+        if not duplicate:
+
+            entered.append(new_vehicle)
 
 
 
@@ -464,17 +704,74 @@ def process():
 
 @app.route("/status")
 def status():
-    """Return current system status (in-memory for real-time display)"""
+
     process()
 
+    total_attacks = len(attack_logs)
+
+    blocked_attacks = len(attack_logs)
+
+    block_rate = 0
+
+    if total_attacks > 0:
+        block_rate = int((blocked_attacks / total_attacks) * 100)
+
+    total_revenue = sum(v.get("bill", 0) for v in completed)
+
+    avg_charge_time = 25
+
+    system_efficiency = 0
+
+    total_sessions = len(entered) + len(charging) + len(completed)
+
+    if total_sessions > 0:
+        system_efficiency = int((len(completed) / total_sessions) * 100)
+
     return jsonify({
+
+        # ================= DASHBOARD =================
+
         "entered": entered,
         "charging": charging,
         "completed": completed[-10:],
+        "attack_logs": attack_logs[-20:],
         "logs": logs[-20:],
-        "attack_logs": attack_logs[-20:]
-    })
 
+        "metrics": {
+            "total_vehicles": total_sessions,
+            "active_sessions": len(charging),
+            "total_attacks": total_attacks,
+            "block_rate": block_rate
+        },
+
+        # ================= ATTACKS =================
+
+
+        "attack_distribution": {
+            "Replay": len([a for a in attack_logs if "REPLAY" in a["event"]]),
+            "Fake": len([a for a in attack_logs if "FAKE" in a["event"]]),
+            "Missing": len([a for a in attack_logs if "MISSING" in a["event"]]),
+            "DoS": len([a for a in attack_logs if "DOS" in a["event"]])
+        },
+
+        # ================= SECURITY =================
+
+        "security": {
+            "recent_attacks": total_attacks,
+            "blocked": blocked_attacks,
+            "threat_level": "LOW" if total_attacks < 3 else "MEDIUM"
+        },
+
+        # ================= ANALYTICS =================
+
+        "analytics": {
+            "total_revenue": total_revenue,
+            "avg_session_time": "25m",
+            "system_efficiency": system_efficiency,
+            "avg_charge_time": avg_charge_time
+        }
+
+    })
 
 # ============ DATABASE STATUS ENDPOINT ============
 
@@ -482,7 +779,7 @@ def status():
 def db_status():
     """Return data from database (for analytics)"""
     try:
-        total_vehicles = Vehicle.query.count()
+        total_vehicles= len(entered) + len(charging) + len(completed)
         total_sessions = ChargingSession.query.count()
         total_attacks = AttackLog.query.count()
         active_sessions = ChargingSession.query.filter_by(status='active').count()
@@ -501,7 +798,71 @@ def db_status():
 
 @app.route("/")
 def home():
-    return render_template("index_new.html")
+    return render_template("dashboard.html")
+
+
+# ============ ADMIN API ENDPOINTS ============
+
+@app.route("/api/admin/reset-queue", methods=["POST"])
+def reset_queue():
+    """Reset all queues"""
+    global entered, charging, completed, logs, attack_logs
+    try:
+        entered = []
+        charging = []
+        completed = []
+        # Preserve logs for history
+        return jsonify({"status": "success", "message": "Queue reset"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/blockchain/verify", methods=["GET"])
+def verify_blockchain():
+    """Verify blockchain integrity"""
+    try:
+        crypto_logs = CryptoSecureLog.query.all()
+        is_valid = True
+        
+        for i in range(1, len(crypto_logs)):
+            if crypto_logs[i].previous_hash != crypto_logs[i-1].current_hash:
+                is_valid = False
+                break
+        
+        return jsonify({
+            "status": "success",
+            "is_valid": is_valid,
+            "total_blocks": len(crypto_logs),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/blockchain/sync", methods=["POST"])
+def sync_blockchain():
+    """Sync blockchain with latest transactions"""
+    try:
+        # Create a new block with system state
+        admin = User.query.filter_by(role='admin').first()
+        secure_log = CryptoSecureLog(
+            event_type='sync',
+            description=f'Blockchain sync - {len(entered)} queued, {len(charging)} charging, {len(completed)} completed',
+            user_id=admin.id if admin else None,
+            ip_address='127.0.0.1'
+        )
+        secure_log.compute_hash()
+        db.session.add(secure_log)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Blockchain synced",
+            "block_hash": secure_log.current_hash
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # ============ REGISTER BLUEPRINTS ============
@@ -511,12 +872,14 @@ from ml_routes import ml_bp
 from blockchain_routes import blockchain_bp
 from analytics_routes import analytics_bp
 from advanced_routes import advanced_bp
+from security_apis import security_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(ml_bp)
 app.register_blueprint(blockchain_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(advanced_bp)
+app.register_blueprint(security_bp)
 
 
 # ============ APP INITIALIZATION ============
